@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""\
+A chess-inspired real-time strategy game.
+"""
+
 __version__ = '0.0.0'
 
 from .ai import *

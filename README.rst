@@ -20,9 +20,15 @@ A chess-inspired real-time strategy game.
 
 Installation
 ============
-Install cherts using ``pip``::
+Install cherts from PyPI using ``pip``::
 
     $ pip install cherts
+
+Install a local checkout of cherts for development using ``flit``::
+
+    $ git clone git@github.com:kxgames/cherts.git
+    $ cd cherts
+    $ flit install -s
 
 Usage
 =====
