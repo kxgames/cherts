@@ -3,7 +3,15 @@
 import kxg
 import pyglet
 
+
+
+
 class Gui:
+#    - Needs Piece type, positions, possible/legal/current moves, 
+#      possible/legal/current patterns, pattern consequences
+#    - Highlights available moves, patterns, etc.
+#    - Display extra info on patterns
+
 
     def __init__(self):
         self.window = pyglet.window.Window()
