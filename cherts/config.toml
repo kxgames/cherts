@@ -1,0 +1,56 @@
+[board]
+width = 8
+height = 8
+
+[setup]
+pieces = [
+    {name='king', pos=[0,0]},
+]
+
+[pieces.king]
+moves = ['king']
+move_speed = 10
+move_cooldown_time = 10
+patterns = ['spawn', 'victory']
+
+[moves.king]
+mode = 'slide'
+waypoints = [
+  'x-1, y+1',
+  'x  , y+1',
+  'x+1, y+1',
+  'x-1, y  ',
+  'x+1, y  ',
+  'x-1, y-1',
+  'x  , y-1',
+  'x+1, y-1',
+]
+
+[moves.bishop]
+mode = 'slide'
+waypoints = [
+  '[[(x+i,y+i)] for i in range(max(-x, -y), min(w-x, h-y))]',
+]
+
+[moves.rook]
+mode = 'slide'
+waypoints = [
+  '[[(x+i,y)] for i in range(-x, w-x)]',
+  '[[(x,y+i)] for i in range(-y, h-y)]',
+]
+
+[patterns.spawn]
+waypoints = [
+  'any, y-2',
+]
+on_complete = ['make pawn']
+must_complete = false
+
+[patterns.victory]
+waypoints = [
+  'any, h',
+]
+on_complete = ['victory']
+
+
+

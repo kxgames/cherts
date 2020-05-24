@@ -2,5 +2,7 @@
 
 import kxg
 
-class AiActor (kxg.Actor):
+from .actors import BaseActor
+
+class AiActor(BaseActor):
     pass

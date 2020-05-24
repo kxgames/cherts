@@ -5,6 +5,7 @@ import kxg
 import pyglet
 
 from vecrec import Vector
+from .actors import BaseActor
 
 pyglet.resource.path = [
         os_path.join(os_path.dirname(__file__), '..', 'resources'),
@@ -86,7 +87,7 @@ class Gui:
         self.batch.draw()
 
 
-class GuiActor (kxg.Actor):
+class GuiActor (BaseActor):
 
     def __init__(self):
         super().__init__()
