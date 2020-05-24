@@ -4,12 +4,14 @@ import kxg
 
 class DummyPiece(kxg.Token):
 
-    def __init__(self, type, init_position):
+    def __init__(self, player, type, init_position):
         super().__init__()
 
+        self._player = player
         self._type = type
         self._position = init_position
         self._health = 1000
+        self._radius = 50
         # self._moves = All Move objects for piece type
         # self._attacks = Attack
         # self._defense = Defense
@@ -18,6 +20,10 @@ class DummyPiece(kxg.Token):
         # Recharge time (before making next motion)
 
     # Attributes
+    @property
+    def player(self):
+        return self._player
+
     @property
     def type(self):
         return self._type
@@ -29,6 +35,10 @@ class DummyPiece(kxg.Token):
     @property
     def health(self):
         return self._health
+
+    @property
+    def radius(self):
+        return self._radius
 
 
     # Moves and patterns

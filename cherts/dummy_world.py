@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import kxg
+from vecrec import Vector
+
 from cherts.dummy_tokens import *
 from cherts.dummy_map import DummyMap
 
@@ -30,3 +32,21 @@ class DummyWorld(kxg.World):
 
     def on_update_game(self, dt):
         super().on_update_game(dt)
+
+
+    @kxg.read_only
+    def find_piece_at_location(self, click_location):
+        """
+        Finds the piece at an (x, y) location.
+        """
+
+        for player, pieces in self.pieces.items():
+            for piece in pieces:
+                radius = piece.radius
+                offset = click_location - piece.position
+                if offset.magnitude_squared < radius**2:
+                    # Clicked on piece
+                    return piece
+
+        # No piece found under click location
+        return None

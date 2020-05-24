@@ -33,9 +33,10 @@ class CreateDummyPiece(kxg.Message):
     Generic create a piece
     """
 
-    def __init__(self, player, position):
+    def __init__(self, player, position, type):
         self.player = player
         self.position = position
+        self.type = type
         self.new_piece = None
 
     def tokens_to_add(self):
@@ -57,9 +58,8 @@ class CreateDummyPiece(kxg.Message):
 
 class CreateDummyKing(CreateDummyPiece):
     def __init__(self, player, position):
-        super().__init__(player, position)
-        self.type = 'king'
-        self.new_piece = DummyPiece(self.type, self.position)
+        super().__init__(player, position, type='king')
+        self.new_piece = DummyPiece(self.player, self.type, self.position)
 
     def on_check(self, world):
         # Do piece specific checks
