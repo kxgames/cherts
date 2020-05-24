@@ -3,7 +3,7 @@
 import kxg
 import pyglet
 
-
+from .actors import BaseActor
 
 
 class Gui:
@@ -23,7 +23,7 @@ class Gui:
         self.batch.draw()
 
 
-class GuiActor (kxg.Actor):
+class GuiActor (BaseActor):
 
     def __init__(self):
         super().__init__()
