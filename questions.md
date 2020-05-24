@@ -6,4 +6,6 @@ Can a Setup message call other messages? (and how?)
 
 Displaying svg or automated export of png?
 
+How does gui actor communicate with token extensions? (e.g. for selection)
+
 

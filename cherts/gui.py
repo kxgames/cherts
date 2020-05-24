@@ -39,19 +39,25 @@ class Gui:
         Load the piece images and set the piece codes
         """
 
+        pri = pyglet.resource.image # function handle
         self.images = {
-                'piece_kdt': pyglet.resource.image('piece_kdt45.png'),
-                'piece_klt': pyglet.resource.image('piece_klt45.png'),
-                'piece_qdt': pyglet.resource.image('piece_qdt45.png'),
-                'piece_qlt': pyglet.resource.image('piece_qlt45.png'),
-                'piece_rdt': pyglet.resource.image('piece_rdt45.png'),
-                'piece_rlt': pyglet.resource.image('piece_rlt45.png'),
-                'piece_bdt': pyglet.resource.image('piece_bdt45.png'),
-                'piece_blt': pyglet.resource.image('piece_blt45.png'),
-                'piece_ndt': pyglet.resource.image('piece_ndt45.png'),
-                'piece_nlt': pyglet.resource.image('piece_nlt45.png'),
-                'piece_pdt': pyglet.resource.image('piece_pdt45.png'),
-                'piece_plt': pyglet.resource.image('piece_plt45.png'),
+                # Pieces
+                'piece_kdt': pri('piece_kdt45.png'),
+                'piece_klt': pri('piece_klt45.png'),
+                'piece_qdt': pri('piece_qdt45.png'),
+                'piece_qlt': pri('piece_qlt45.png'),
+                'piece_rdt': pri('piece_rdt45.png'),
+                'piece_rlt': pri('piece_rlt45.png'),
+                'piece_bdt': pri('piece_bdt45.png'),
+                'piece_blt': pri('piece_blt45.png'),
+                'piece_ndt': pri('piece_ndt45.png'),
+                'piece_nlt': pri('piece_nlt45.png'),
+                'piece_pdt': pri('piece_pdt45.png'),
+                'piece_plt': pri('piece_plt45.png'),
+
+                # User interface
+                'selected_circle': pri('selected_circle.png'),
+                'unselected_circle': pri('unselected_circle.png'),
                 }
 
         # The three letter codes are [type][color][background]
@@ -111,11 +117,21 @@ class GuiActor (kxg.Actor):
     def on_mouse_press(self, x, y, button, modifiers):
         if button == 1:
             # Left click to select pieces
-            piece = self.world.find_piece_at_location(Vector(x, y))
-            if piece is None:
-                print(f"Did not select a piece")
+            undercursor_piece = self.world.find_piece_at_location(Vector(x, y))
+            
+            if undercursor_piece is None:
+                if self.selected_piece is not None:
+                    p = self.selected_piece
+                    print(f"Unselecting p{p.player} {p.type}")
+                    # Unselect a piece
+                    self.selected_piece = None
+                else:
+                    print(f"Did not select a piece")
             else:
-                print(f"Piece selected p{piece.player} {piece.type}")
+                # Select piece
+                if self.selected_piece != undercursor_piece:
+                    print(f"Piece selected p{undercursor_piece.player} {undercursor_piece.type}")
+                self.selected_piece = undercursor_piece
 
         elif button == 2:
             # Right click to direct pieces
@@ -130,15 +146,57 @@ class DummyPieceExtension (kxg.TokenExtension):
 
     @kxg.watch_token
     def on_add_to_world(self, world):
-        self.sprite = pyglet.sprite.Sprite(
-                self.actor.gui.images[self.get_image()],
-                x=self.token.position[0],
-                y=self.token.position[1],
+        # Setup
+        self.selected = False
+
+        # Make sprites
+        self.icon_sprite = self._new_sprite(self.get_image_key(), 1)
+        self.selected_sprite = self._new_sprite('selected_circle', 0)
+        self.selected_sprite.visible = False
+        self.unselected_sprite = self._new_sprite('unselected_circle', 0)
+
+        self.sprites = [
+                self.icon_sprite,
+                self.selected_sprite,
+                self.unselected_sprite,
+                ]
+
+        # Rescale the sprite image to match the piece radius
+        icon_w = self.icon_sprite.width
+        icon_h = self.icon_sprite.height
+        icon_r = (icon_w**2 + icon_h**2)**0.5 / 2
+
+        selected_w = self.selected_sprite.width
+        selected_h = self.selected_sprite.height
+        selected_r = (selected_w**2 + selected_h**2)**0.5 / 2
+
+        piece_r = self.token.radius
+
+        scale = piece_r / icon_r
+        for sprite in self.sprites:
+            sprite.scale = scale
+        
+
+    def _new_sprite(self, image_key, group_num=1, **sprite_kwargs):
+        """
+        Create a new sprite object with some common (but cluttering) parameters 
+        prefilled. 
+        'image_key' is the key for the image dict defined in the gui.
+        'group_num' is the pyglet OrderedGroup number
+        'sprite_kwargs' are passed directly to Sprite constructor
+        """
+        token_x, token_y = self.token.position
+        sprite = pyglet.sprite.Sprite(
+                self.actor.gui.images[image_key],
+                x=token_x, y=token_y,
                 batch=self.actor.gui.batch,
-                group=pyglet.graphics.OrderedGroup(1),
+                group=pyglet.graphics.OrderedGroup(group_num),
+                **sprite_kwargs,
         )
 
-    def get_image(self):
+        return sprite
+
+    def get_image_key(self):
         pc = self.actor.gui.piece_file_codes
         type = self.token.type
 
@@ -149,13 +207,34 @@ class DummyPieceExtension (kxg.TokenExtension):
         else:
             raise NotImplementedError
 
-        image_name = f"piece_{pc[type]}{pc[color]}t"
-        return image_name
+        image_key = f"piece_{pc[type]}{pc[color]}t"
+        return image_key
+
 
     @kxg.watch_token
     def on_update_game(self, delta_t):
-        self.sprite.position = self.token.position
+        for sprite in self.sprites:
+            sprite.position = self.token.position
+
+        piece = self.token
+        guiactor = self.actor
+
+        if self.selected and guiactor.selected_piece != piece:
+            # Piece has been unselected
+            self.selected = False
+            self.selected_sprite.visible = False
+            self.unselected_sprite.visible = True
+
+        elif not self.selected and guiactor.selected_piece == piece:
+            # Piece has been selected
+            self.selected = True
+            self.selected_sprite.visible = True
+            self.unselected_sprite.visible = False
+        else:
+            # No change in status
+            pass
 
     @kxg.watch_token
     def on_remove_from_world(self):
-        self.sprite.delete()
+        for sprite in self.sprites:
+            sprite.delete()
