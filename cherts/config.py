@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import toml
+import rtoml
 from pathlib import Path
-from more_itertools import flatten
-
-from .world import PieceType
+from more_itertools import collapse
+from .world import Board, Piece, PieceType, MoveType, PatternType
 
 # Naming conventions
 # ==================
@@ -13,13 +12,14 @@ from .world import PieceType
 
 def load_config():
     toml_path = Path(__file__).parent / 'config.toml'
-    return toml.load(toml_path)
+    return rtoml.load(toml_path)
 
 def load_initial_pieces(config, player, piece_types):
     pieces = []
-    for k, xy in config['setup']['pieces']:
-        position = player.resolve_relative_coord(xy)
-        piece = Piece(player, piece_types[k], position)
+    for params in config['setup']['pieces']:
+        piece_type = piece_types[params['name']]
+        position = player.to_absolute_coord(params['pos'])
+        piece = Piece(player, piece_type, position)
         pieces.append(piece)
     return pieces
 
@@ -43,15 +43,16 @@ def load_piece_types(config, move_types, pattern_types):
 def load_piece_type(params, name, move_types, pattern_types):
     return PieceType(
             name=name,
-            move_types=list(flatten([
+            radius=params['radius'],
+            move_types=list(collapse([
                 move_types[k]
-                for k in config['moves']
+                for k in params['moves']
             ])),
             pattern_types={
                 pattern_types[k]
-                for k in config['patterns']
+                for k in params['patterns']
             },
-            cooldown_sec=config['cooldown_sec'],
+            cooldown_sec=params['move_cooldown_sec'],
     )
 
 def load_move_types(config):

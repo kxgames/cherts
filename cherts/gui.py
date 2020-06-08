@@ -11,7 +11,7 @@ pyglet.resource.path = [
         os_path.join(os_path.dirname(__file__), '..', 'resources'),
         ]
 
-class Gui:
+class Gui(BaseActor):
 #    - Needs Piece type, positions, possible/legal/current moves, 
 #      possible/legal/current patterns, pattern consequences
 #    - Highlights available moves, patterns, etc.
@@ -100,12 +100,6 @@ class GuiActor (BaseActor):
         self.gui = gui
         self.gui.window.set_handlers(self)
 
-    def on_start_game(self, num_players):
-        # Make players here or in SetupGame message?
-        #self.player = tokens.Player()
-        #self >> messages.CreatePlayer(self.player)
-        pass
-
     def on_draw(self):
         self.gui.on_refresh_gui()
 
@@ -118,7 +112,7 @@ class GuiActor (BaseActor):
     def on_mouse_press(self, x, y, button, modifiers):
         if button == 1:
             # Left click to select pieces
-            undercursor_piece = self.world.find_piece_at_location(Vector(x, y))
+            undercursor_piece = self.world.find_piece_at_position(Vector(x, y))
             
             if undercursor_piece is None:
                 if self.selected_piece is not None:
@@ -143,7 +137,7 @@ class GuiActor (BaseActor):
 
 
 
-class DummyPieceExtension (kxg.TokenExtension):
+class PieceExtension (kxg.TokenExtension):
 
     @kxg.watch_token
     def on_add_to_world(self, world):
@@ -199,11 +193,11 @@ class DummyPieceExtension (kxg.TokenExtension):
 
     def get_image_key(self):
         pc = self.actor.gui.piece_file_codes
-        type = self.token.type
+        type = self.token.type.name
 
-        if self.token.player == 1:
+        if self.token.player.id == 1:
             color = 'white'
-        elif self.token.player == 2:
+        elif self.token.player.id == 2:
             color = 'black'
         else:
             raise NotImplementedError

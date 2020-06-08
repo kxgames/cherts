@@ -20,8 +20,6 @@ class SetupWorld(Message):
 
     def __init__(self, config):
         self.config = config
-
-    def tokens_to_add(self):
         self.board = load_board(self.config)
         self.move_types = load_move_types(self.config)
         self.pattern_types = load_pattern_types(self.config)
@@ -31,6 +29,7 @@ class SetupWorld(Message):
                 self.pattern_types,
         )
 
+    def tokens_to_add(self):
         yield self.board
         yield from self.move_types.values()
         yield from self.pattern_types.values()

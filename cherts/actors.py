@@ -4,6 +4,7 @@ import kxg
 
 from .messages import SetupWorld, SetupPlayer
 from .world import Player
+from .config import load_initial_pieces
 
 class BaseActor(kxg.Actor):
 
@@ -13,7 +14,7 @@ class BaseActor(kxg.Actor):
 
     @kxg.subscribe_to_message(SetupWorld)
     def on_setup_world(self, message):
-        self.player = Player.from_actor(self)
+        self.player = Player.from_actor(self, message.board)
         pieces = load_initial_pieces(
                 message.config,
                 self.player,

@@ -1,5 +1,6 @@
-from vecrec import Vector
-from kxg import Token, read_only
+import kxg
+from vecrec import Vector, cast_anything_to_vector, accept_anything_as_vector
+from kxg import read_only
 
 # Coordinate frames
 # =================
@@ -17,9 +18,10 @@ from kxg import Token, read_only
 #   relative coordinates, but are converted to absolute coordinates as soon as 
 #   possible (e.g. when they are evaluated for a particular piece).
 
-class World(World):
+class World(kxg.World):
 
     def __init__(self):
+        super().__init__()
         self._board = None
         self._players = []
         self._move_types = {}
@@ -55,11 +57,36 @@ class World(World):
     def add_player(self, player):
         self._players.append(player)
 
-class Board(Token):
+    @kxg.read_only
+    def find_piece_at_position(self, xy_click):
+        """
+        Finds the piece at an (x, y) location.
+        """
+        for piece in self.iter_pieces():
+            radius2 = piece.radius**2
+            dist2 = xy_click.get_distance_squared(piece.position)
+
+            # Clicked on this piece.
+            if dist2 < radius2:
+                return piece
+
+        # Didn't click on any piece.
+        return None
+
+    @kxg.read_only
+    def iter_pieces(self):
+        for player in self.players:
+            yield from player.pieces
+
+class Board(kxg.Token):
 
     def __init__(self, width, height):
+        super().__init__()
         self._width = width
         self._height = height
+
+    def __repr__(self):
+        return super().__repr__(width=self.width, height=self.height)
 
     @property
     def size(self):
@@ -73,27 +100,31 @@ class Board(Token):
     def height(self):
         return self._height
 
-class Player(Token):
+class Player(kxg.Token):
 
     @classmethod
     def from_actor(cls, actor, board):
-        if self.id == 1:
+        if actor.id == 1:
             origin = Vector(0, 0)
             heading = Vector(1, 1)
-        elif self.id == 2:
+        elif actor.id == 2:
             origin = Vector(board.width, board.height)
             heading = Vector(-1, -1)
         else:
             # There should only be two players, and their ids should be 1 and 
             # 2.  (The referee has id 0).
-            raise ValueError(f"{self!r} has unexpected id={self.id}")
+            raise ValueError(f"{actor!r} has unexpected id={self.id}")
 
         return cls(origin, heading)
 
     def __init__(self, origin, heading):
-        self._origin = origin
-        self._heading = heading  # -1 or +1
+        super().__init__()
+        self._origin = cast_anything_to_vector(origin)
+        self._heading = cast_anything_to_vector(heading)
         self._pieces = []
+
+    def __repr__(self):
+        return super().__repr__(origin=self.origin, heading=self.heading)
 
     @property
     def origin(self):
@@ -123,14 +154,16 @@ class Player(Token):
             self.lose_piece(piece)
 
     @read_only
+    @accept_anything_as_vector
     def to_absolute_coord(self, xy):
         return self.origin + self.heading * Vector.from_anything(xy)
 
-    @readonly
+    @read_only
+    @accept_anything_as_vector
     def to_relative_coord(self, xy):
         return self.heading * (xy - self.origin)
 
-class Piece(Token):
+class Piece(kxg.Token):
 
     # Not yet implemented:
     # - attack
@@ -139,27 +172,49 @@ class Piece(Token):
     # - orientation
 
     def __init__(self, player, type, position):
+        super().__init__()
         self._player = player
         self._type = type
-        self._position = position
+        self._position = cast_anything_to_vector(position)
         self._current_move = None
         self._current_pattern = None
+
+    def __repr__(self):
+        return super().__repr__(
+                player=self.player,
+                type=self._type.name,
+                position=self.position,
+        )
+
+    def __extend__(self):
+        from . import gui
+        return {
+                gui.GuiActor: gui.PieceExtension,
+        }
 
     @property
     def player(self):
         return self._player
 
     @property
+    def type(self):
+        return self._type
+
+    @property
     def position(self):
         return self._position
 
     @property
-    def move_types():
-        return self.type.move_types
+    def radius(self):
+        return self._type.radius
+
+    @property
+    def move_types(self):
+        return self._type.move_types
 
     @property
     def pattern_types(self):
-        return self.type.pattern_types
+        return self._type.pattern_types
 
     @read_only
     def find_possible_moves(self):
@@ -184,7 +239,7 @@ class Piece(Token):
     def current_pattern(self):
         return self._current_pattern
 
-class PieceType(Token):
+class PieceType(kxg.Token):
     """
     Parameters for a particular piece type.
 
@@ -196,8 +251,10 @@ class PieceType(Token):
     composed entirely of read-only properties.
     """
 
-    def __init__(self, name, *, move_types, pattern_types, cooldown_sec):
+    def __init__(self, name, *, radius, move_types, pattern_types, cooldown_sec):
+        super().__init__()
         self._name = name
+        self._radius = radius
         self._cooldown_sec = cooldown_sec
         self._move_types = move_types
         self._pattern_types = pattern_types
@@ -205,6 +262,10 @@ class PieceType(Token):
     @property
     def name(self):
         return self._name
+
+    @property
+    def radius(self):
+        return self._radius
 
     @property
     def cooldown_sec(self):
@@ -218,11 +279,12 @@ class PieceType(Token):
     def pattern_types(self):
         return self._pattern_types
 
-class Pattern(Token):
+class Pattern(kxg.Token):
 
     # Need some methods to keep track of progress...
 
     def __init__(self, type, piece, waypoints):
+        super().__init__()
         self._type = type
         self._piece = piece
         self._waypoints = waypoints
@@ -239,9 +301,10 @@ class Pattern(Token):
     def waypoints(self):
         return self._waypoints
 
-class PatternType(Token):
+class PatternType(kxg.Token):
 
     def __init__(self, name, *, waypoint_exprs, on_complete_exprs, must_complete):
+        super().__init__()
         self._name = name
         self._waypoint_exprs = waypoint_exprs
         self._on_complete_exprs = on_complete_exprs
@@ -261,13 +324,14 @@ class PatternType(Token):
         )
         return [Pattern(self, piece, x) for x in waypoints]
 
-    @property
-    def make_completion_message(self):
-        raise NotImplementedError
+    #@property
+    #def make_completion_message(self):
+    #    raise NotImplementedError
 
-class Move(Token):
+class Move(kxg.Token):
 
     def __init__(self, type, piece, waypoints):
+        super().__init__()
         self._type = type
         self._piece = piece
         self._waypoints = waypoints
@@ -284,9 +348,10 @@ class Move(Token):
     def waypoints(self):
         return self._waypoints
 
-class MoveType(Token):
+class MoveType(kxg.Token):
 
     def __init__(self, name, *, mode, waypoint_exprs):
+        super().__init__()
         self._name = name
         self._mode = mode
         self._waypoint_exprs = waypoint_exprs
@@ -319,6 +384,36 @@ def eval_waypoint_exprs(exprs, piece, board, any_ok=False):
     return waypoints
 
 def eval_waypoint_expr(expr, piece, board, any_ok=False):
+    """
+    Evaluate the given expression for the given piece and board.
+
+    Parameters:
+        expr: A string containing a python expression.  The following variables 
+            are available to the expression:
+
+            x: The relative x-coordinate of the piece.
+            y: The relative y-coordinate of the piece.
+            w: The width of the board.
+            h: The height of the board.
+            any: NaN.  Used to indicate that a particular coordinate is not 
+                important.  Can only be used if **any_ok** is True.
+
+            The expression should evaluate to:
+
+            - An relative coordinate, i.e. an (x, y) tuple.
+            - A list of relative coordinates, i.e. a path.
+            - A list of list of relative coordinates, i.e. multiple paths.
+
+        piece: The piece the expression applies to.
+        board: The board the piece is moving on.  
+        any_ok: If true, the expression may use the 'any' variable described 
+            above.
+
+    Returns:
+        A list of list of absolute coordinates.  The inner list is all of the 
+        waypoints in a particular move/pattern.  The outer list is all of the 
+        moves/patterns described by the expression.
+    """
     player = piece.player
     rel = player.to_relative_coord(piece.position)
     any = {'any': float('nan')} if any_ok else {}
@@ -330,18 +425,18 @@ def eval_waypoint_expr(expr, piece, board, any_ok=False):
             **any,
     })
     if isinstance(xy := waypoints, tuple):
-        return [[player.to_absolute_coords(xy)]]
+        return [[player.to_absolute_coord(xy)]]
 
-    if not isintance(waypoints, list) or not waypoints:
-        raise ValueError(f"{expr!r}: expected list, got {waypoints!r}")
+    if not isinstance(waypoints, list) or not waypoints:
+        raise ValueError(f"{expr!r}: expected tuple or list, got {waypoints!r}")
 
     if isinstance(waypoints[0], tuple):
-        return [[player.to_absolute_coords(xy) for xy in waypoints]]
+        return [[player.to_absolute_coord(xy) for xy in waypoints]]
 
-    if not isintance(waypoints[0], list) or not waypoints[0]:
+    if not isinstance(waypoints[0], list) or not waypoints[0]:
         raise ValueError(f"{expr!r}: expected list, got {waypoints[0]!r}")
 
-    return [[player.to_absolute_coords(xy) for xy in w] for w in waypoints]
+    return [[player.to_absolute_coord(xy) for xy in w] for w in waypoints]
 
 # Pseudo-code
 

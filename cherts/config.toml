@@ -8,9 +8,10 @@ pieces = [
 ]
 
 [pieces.king]
+radius = 100
 moves = ['king']
 move_speed = 10
-move_cooldown_time = 10
+move_cooldown_sec = 10
 patterns = ['spawn', 'victory']
 
 [moves.king]
@@ -51,6 +52,4 @@ waypoints = [
   'any, h',
 ]
 on_complete = ['victory']
-
-
-
+must_complete = false

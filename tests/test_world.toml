@@ -1,0 +1,322 @@
+[[test_player_coords]]
+origin = [0, 0]
+heading = [1, 1]
+rel_coord = [0, 0]
+abs_coord = [0, 0]
+
+[[test_player_coords]]
+origin = [0, 0]
+heading = [1, 1]
+rel_coord = [0, 1]
+abs_coord = [0, 1]
+
+[[test_player_coords]]
+origin = [0, 0]
+heading = [1, 1]
+rel_coord = [1, 1]
+abs_coord = [1, 1]
+
+[[test_player_coords]]
+origin = [0, 0]
+heading = [1, 1]
+rel_coord = [1, 0]
+abs_coord = [1, 0]
+
+[[test_player_coords]]
+origin = [7, 7]
+heading = [-1, -1]
+rel_coord = [0, 0]
+abs_coord = [7, 7]
+
+[[test_player_coords]]
+origin = [7, 7]
+heading = [-1, -1]
+rel_coord = [0, 1]
+abs_coord = [7, 6]
+
+[[test_player_coords]]
+origin = [7, 7]
+heading = [-1, -1]
+rel_coord = [1, 1]
+abs_coord = [6, 6]
+
+[[test_player_coords]]
+origin = [7, 7]
+heading = [-1, -1]
+rel_coord = [1, 0]
+abs_coord = [6, 7]
+
+[[test_player_coords_inv]]
+origin = [0, 0]
+heading = [1, 1]
+
+[[test_player_coords_inv]]
+origin = [7, 7]
+heading = [-1, -1]
+
+
+# single coord, origin=(0, 0)
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = '0, 0'
+expected = [[[0, 0]]]
+
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x+1, y+1'
+expected = [[[3, 3]]]
+
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x+1, y'
+expected = [[[3, 2]]]
+
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x+1, y-1'
+expected = [[[3, 1]]]
+
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x, y+1'
+expected = [[[2, 3]]]
+
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x, y'
+expected = [[[2, 2]]]
+
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x, y-1'
+expected = [[[2, 1]]]
+
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x-1, y+1'
+expected = [[[1, 3]]]
+
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x-1, y'
+expected = [[[1, 2]]]
+
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x-1, y-1'
+expected = [[[1, 1]]]
+
+
+# single coord, origin=(7, 7)
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = '0, 0'
+expected = [[[7, 7]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x+1, y+1'
+expected = [[[1, 1]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x+1, y'
+expected = [[[1, 2]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x+1, y-1'
+expected = [[[1, 3]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x, y+1'
+expected = [[[2, 1]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x, y'
+expected = [[[2, 2]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x, y-1'
+expected = [[[2, 3]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x-1, y+1'
+expected = [[[3, 1]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x-1, y'
+expected = [[[3, 2]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = 'x-1, y-1'
+expected = [[[3, 3]]]
+
+
+# multiple coords
+[[test_eval_waypoint_expr]]
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = '[(0, 0), (0, 1), (1, 0), (1, 1)]'
+expected = [[[0, 0], [0, 1], [1, 0], [1, 1]]]
+
+[[test_eval_waypoint_expr]]
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = '[(0, 0), (0, 1), (1, 0), (1, 1)]'
+expected = [[[7, 7], [7, 6], [6, 7], [6, 6]]]
+
+
+# multiple paths
+[[test_eval_waypoint_expr]]
+id = 'multiple-1'
+origin = [0, 0]
+heading = [1, 1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = '[[(0, 0), (0, 1)], [(1, 0), (1, 1)]]'
+expected = [[[0, 0], [0, 1]], [[1, 0], [1, 1]]]
+
+[[test_eval_waypoint_expr]]
+id = 'multiple-2'
+origin = [7, 7]
+heading = [-1, -1]
+x = 2
+y = 2
+w = 8
+h = 8
+expr = '[[(0, 0), (0, 1)], [(1, 0), (1, 1)]]'
+expected = [[[7, 7], [7, 6]], [[6, 7], [6, 6]]]
+
+
+[[test_eval_waypoint_expr_err]]
+expr = "'hello'"
+err_type = 'ValueError'
+err_msg = "\"'hello'\": expected tuple or list, got 'hello'"
+
+[[test_eval_waypoint_expr_err]]
+expr = "['hello']"
+err_type = 'ValueError'
+err_msg = "\"\\['hello'\\]\": expected list, got 'hello'"
+
+[[test_eval_waypoint_expr_err]]
+expr = "[['hello']]"
+err_type = 'VectorCastError'
+err_msg = "Could not cast 'hello' to vector"
+
