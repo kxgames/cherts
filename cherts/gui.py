@@ -11,7 +11,7 @@ pyglet.resource.path = [
         os_path.join(os_path.dirname(__file__), '..', 'resources'),
         ]
 
-class Gui(BaseActor):
+class Gui:
 #    - Needs Piece type, positions, possible/legal/current moves, 
 #      possible/legal/current patterns, pattern consequences
 #    - Highlights available moves, patterns, etc.
@@ -87,7 +87,7 @@ class Gui(BaseActor):
         self.batch.draw()
 
 
-class GuiActor (BaseActor):
+class GuiActor(BaseActor):
 
     def __init__(self):
         super().__init__()
@@ -137,7 +137,17 @@ class GuiActor (BaseActor):
 
 
 
-class PieceExtension (kxg.TokenExtension):
+class BoardExtension(kxg.TokenExtension):
+
+    def xyg_from_xyw(self, xyw):
+        # Flip this board so that our pieces are facing forward.
+        xyp = self.actor.player.xyp_from_xyw(xyw)
+        return xyp * self.actor.gui.window_shape.y / self.actor.board.height
+        
+    def xyw_from_xyg(self, xyg):
+        pass
+
+class PieceExtension(kxg.TokenExtension):
 
     @kxg.watch_token
     def on_add_to_world(self, world):
