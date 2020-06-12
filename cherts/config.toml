@@ -4,11 +4,11 @@ height = 8
 
 [setup]
 pieces = [
-    {name='king', pos=[0,0]},
+    {name='king', pos=[1,1]},
 ]
 
 [pieces.king]
-radius = 100
+radius = 0.4
 moves = ['king']
 move_speed = 10
 move_cooldown_sec = 10

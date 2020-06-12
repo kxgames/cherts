@@ -18,7 +18,7 @@ def load_initial_pieces(config, player, piece_types):
     pieces = []
     for params in config['setup']['pieces']:
         piece_type = piece_types[params['name']]
-        position = player.to_absolute_coord(params['pos'])
+        position = player.xyw_from_xyp(params['pos'])
         piece = Piece(player, piece_type, position)
         pieces.append(piece)
     return pieces
@@ -65,7 +65,7 @@ def load_move_type(params, name):
     return MoveType(
             name,
             mode=params['mode'],
-            waypoint_exprs=params['waypoints'],
+            xyp_exprs=params['waypoints'],
     )
 
 def load_pattern_types(config):
@@ -77,7 +77,7 @@ def load_pattern_types(config):
 def load_pattern_type(params, name):
     return PatternType(
             name,
-            waypoint_exprs=params['waypoints'],
+            xyp_exprs=params['waypoints'],
             on_complete_exprs=params['on_complete'],
             must_complete=params['must_complete'],
     )

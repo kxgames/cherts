@@ -3,9 +3,11 @@
 import os.path as os_path
 import kxg
 import pyglet
+from pyglet.gl import *
 
-from vecrec import Vector
+from vecrec import Vector, accept_anything_as_vector
 from .actors import BaseActor
+from .messages import SetupWorld
 
 pyglet.resource.path = [
         os_path.join(os_path.dirname(__file__), '..', 'resources'),
@@ -19,7 +21,7 @@ class Gui:
 
     def __init__(self):
         self.bg_color = (0.75, 0.75, 0.75, 1.0)
-        self.window_shape = Vector(800, 600)
+        self.window_shape = Vector(400, 400)
 
         self.window = pyglet.window.Window()
         self.window.set_size(*self.window_shape)
@@ -103,51 +105,100 @@ class GuiActor(BaseActor):
     def on_draw(self):
         self.gui.on_refresh_gui()
 
-
-    # User input events
     def on_key_press(self, symbol, modifiers):
         if symbol == pyglet.window.key.SPACE:
             pass
 
-    def on_mouse_press(self, x, y, button, modifiers):
+    def on_mouse_press(self, xg, yg, button, modifiers):
+        # Left click to select pieces:
         if button == 1:
-            # Left click to select pieces
-            undercursor_piece = self.world.find_piece_at_position(Vector(x, y))
-            
+            xyw = self.xyw_from_xyg((xg, yg))
+            undercursor_piece = self.world.find_piece(xyw)
+
             if undercursor_piece is None:
                 if self.selected_piece is not None:
-                    p = self.selected_piece
-                    print(f"Unselecting p{p.player} {p.type}")
-                    # Unselect a piece
                     self.selected_piece = None
-                else:
-                    print(f"Did not select a piece")
-            else:
-                # Select piece
-                if self.selected_piece != undercursor_piece:
-                    print(f"Piece selected p{undercursor_piece.player} {undercursor_piece.type}")
+
+            elif undercursor_piece.player is self.player:
                 self.selected_piece = undercursor_piece
 
+        # Right click to direct pieces:
         elif button == 2:
-            # Right click to direct pieces
             pass
 
     def on_mouse_motion(self, x, y, dx, dy):
         pass
 
 
+    @accept_anything_as_vector
+    def xyg_from_xyw(self, xyw):
+        # Convert to player coordinates to make sure our pieces are always 
+        # facing forward.
+        xyp = self.player.xyp_from_xyw(xyw)
+        xyp_margin = (0.5, 0.5)
+        return (xyp + xyp_margin) * self.px_per_tile
+        
+    @accept_anything_as_vector
+    def xyw_from_xyg(self, xyg):
+        xyp_margin = (0.5, 0.5)
+        xyp = (xyg / self.px_per_tile) - xyp_margin
+        return self.player.xyw_from_xyp(xyp)
+
+    @property
+    def px_per_tile(self):
+        return self.gui.window_shape.y / self.world.board.height
 
 class BoardExtension(kxg.TokenExtension):
 
-    def xyg_from_xyw(self, xyw):
-        # Flip this board so that our pieces are facing forward.
-        xyp = self.actor.player.xyp_from_xyw(xyw)
-        return xyp * self.actor.gui.window_shape.y / self.actor.board.height
-        
-    def xyw_from_xyg(self, xyg):
-        pass
+    @kxg.subscribe_to_message(SetupWorld)
+    def on_setup_world(self, message):
+        # Normally this kind of setup would happen in `on_add_to_world()`, but 
+        # we can't do that here because:
+        # 
+        # - The board is added to the world before the players.
+        # - The `xyg_from_xyw()` function needs to know what player we are.
+        # 
+        # We can do this setup after the SetupWorld event, because the actor 
+        # creates the player earlier in the handling of that same event.
+
+        w, h = self.token.size
+        d = 0.5
+        xyg_from_xyw = self.actor.xyg_from_xyw
+
+        h_lines = [
+                [xyg_from_xyw(-0.5, y-0.5), xyg_from_xyw(w+0.5, y-0.5)]
+                for y in range(h+1)
+        ]
+        v_lines = [
+                [xyg_from_xyw(x-0.5, -0.5), xyg_from_xyw(x-0.5, h+0.5)]
+                for x in range(w+1)
+        ]
+        xygs = sum(h_lines + v_lines, [])
+
+        n = len(xygs)
+        v2f = sum((x.tuple for x in xygs), ())
+        c3B = n * [0, 0, 0]
+
+        self.border = self.actor.gui.batch.add(
+                n, GL_LINES, None,
+                ('v2f', v2f),
+                ('c3B', c3B),
+        )
+
+    @kxg.watch_token
+    def on_remove_from_world(self):
+        self.border.delete()
+
 
 class PieceExtension(kxg.TokenExtension):
+
+    def get_image_key(self):
+        pc = self.actor.gui.piece_file_codes
+        type = self.token.type.name
+        color = self.token.player.color
+
+        image_key = f"piece_{pc[type]}{pc[color]}t"
+        return image_key
 
     @kxg.watch_token
     def on_add_to_world(self, world):
@@ -164,7 +215,7 @@ class PieceExtension(kxg.TokenExtension):
                 self.icon_sprite,
                 self.selected_sprite,
                 self.unselected_sprite,
-                ]
+        ]
 
         # Rescale the sprite image to match the piece radius
         icon_w = self.icon_sprite.width
@@ -175,62 +226,27 @@ class PieceExtension(kxg.TokenExtension):
         selected_h = self.selected_sprite.height
         selected_r = (selected_w**2 + selected_h**2)**0.5 / 2
 
-        piece_r = self.token.radius
+        piece_r = self.actor.px_per_tile * self.token.radius
 
         scale = piece_r / icon_r
         for sprite in self.sprites:
             sprite.scale = scale
         
-
-    def _new_sprite(self, image_key, group_num=1, **sprite_kwargs):
-        """
-        Create a new sprite object with some common (but cluttering) parameters 
-        prefilled. 
-        'image_key' is the key for the image dict defined in the gui.
-        'group_num' is the pyglet OrderedGroup number
-        'sprite_kwargs' are passed directly to Sprite constructor
-        """
-        token_x, token_y = self.token.position
-        sprite = pyglet.sprite.Sprite(
-                self.actor.gui.images[image_key],
-                x=token_x, y=token_y,
-                batch=self.actor.gui.batch,
-                group=pyglet.graphics.OrderedGroup(group_num),
-                **sprite_kwargs,
-        )
-
-        return sprite
-
-    def get_image_key(self):
-        pc = self.actor.gui.piece_file_codes
-        type = self.token.type.name
-
-        if self.token.player.id == 1:
-            color = 'white'
-        elif self.token.player.id == 2:
-            color = 'black'
-        else:
-            raise NotImplementedError
-
-        image_key = f"piece_{pc[type]}{pc[color]}t"
-        return image_key
-
-
     @kxg.watch_token
     def on_update_game(self, delta_t):
         for sprite in self.sprites:
-            sprite.position = self.token.position
-
+            sprite.position = self.actor.xyg_from_xyw(self.token.xyw)
+        
         piece = self.token
-        guiactor = self.actor
+        actor = self.actor
 
-        if self.selected and guiactor.selected_piece != piece:
+        if self.selected and actor.selected_piece != piece:
             # Piece has been unselected
             self.selected = False
             self.selected_sprite.visible = False
             self.unselected_sprite.visible = True
 
-        elif not self.selected and guiactor.selected_piece == piece:
+        elif not self.selected and actor.selected_piece == piece:
             # Piece has been selected
             self.selected = True
             self.selected_sprite.visible = True
@@ -243,3 +259,25 @@ class PieceExtension(kxg.TokenExtension):
     def on_remove_from_world(self):
         for sprite in self.sprites:
             sprite.delete()
+
+    def _new_sprite(self, image_key, group_num=1, **sprite_kwargs):
+        """
+        Create a new sprite object with some common (but cluttering) parameters 
+        prefilled. 
+        'image_key' is the key for the image dict defined in the gui.
+        'group_num' is the pyglet OrderedGroup number
+        'sprite_kwargs' are passed directly to Sprite constructor
+        """
+
+        xg, yg = self.actor.xyg_from_xyw(self.token.xyw)
+        sprite = pyglet.sprite.Sprite(
+                self.actor.gui.images[image_key],
+                x=xg, y=yg,
+                batch=self.actor.gui.batch,
+                group=pyglet.graphics.OrderedGroup(group_num),
+                **sprite_kwargs,
+        )
+
+        return sprite
+
+

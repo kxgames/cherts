@@ -95,13 +95,13 @@ class World(kxg.World):
         self._players.append(player)
 
     @kxg.read_only
-    def find_piece_at_position(self, xy_click):
+    def find_piece(self, xyw_click):
         """
         Finds the piece at an (x, y) location.
         """
         for piece in self.iter_pieces():
             radius2 = piece.radius**2
-            dist2 = xy_click.get_distance_squared(piece.position)
+            dist2 = xyw_click.get_distance_squared(piece.xyw)
 
             # Clicked on this piece.
             if dist2 < radius2:
@@ -125,6 +125,12 @@ class Board(kxg.Token):
     def __repr__(self):
         return super().__repr__(width=self.width, height=self.height)
 
+    def __extend__(self):
+        from . import gui
+        return {
+                gui.GuiActor: gui.BoardExtension,
+        }
+
     @property
     def size(self):
         return self.width, self.height
@@ -141,27 +147,30 @@ class Player(kxg.Token):
 
     @classmethod
     def from_actor(cls, actor, board):
-        if actor.id == 1:
+        if actor.id == 2:
             origin = Vector(0, 0)
             heading = Vector(1, 1)
-        elif actor.id == 2:
-            origin = Vector(board.width, board.height)
+            color = 'white'
+        elif actor.id == 3:
+            origin = Vector(board.width - 1, board.height - 1)
             heading = Vector(-1, -1)
+            color = 'black'
         else:
-            # There should only be two players, and their ids should be 1 and 
-            # 2.  (The referee has id 0).
-            raise ValueError(f"{actor!r} has unexpected id={self.id}")
+            # There should only be two players, and their ids should be 2 and 
+            # 3.  (The referee has id 1).
+            raise ValueError(f"{actor!r} has unexpected id={actor.id}")
 
-        return cls(origin, heading)
+        return cls(origin, heading, color)
 
-    def __init__(self, origin, heading):
+    def __init__(self, origin, heading, color):
         super().__init__()
         self._origin = cast_anything_to_vector(origin)
         self._heading = cast_anything_to_vector(heading)
+        self._color = color
         self._pieces = []
 
     def __repr__(self):
-        return super().__repr__(origin=self.origin, heading=self.heading)
+        return super().__repr__(color=self.color)
 
     @property
     def origin(self):
@@ -170,6 +179,10 @@ class Player(kxg.Token):
     @property
     def heading(self):
         return self._heading
+
+    @property
+    def color(self):
+        return self._color
 
     @property
     def pieces(self):
@@ -218,9 +231,9 @@ class Piece(kxg.Token):
 
     def __repr__(self):
         return super().__repr__(
-                player=self.player,
+                player=self.player.id,
                 type=self._type.name,
-                position=self.position,
+                xyw=self.xyw,
         )
 
     def __extend__(self):
@@ -296,6 +309,9 @@ class PieceType(kxg.Token):
         self._move_types = move_types
         self._pattern_types = pattern_types
 
+    def __repr__(self):
+        return super().__repr__(name=self.name)
+
     @property
     def name(self):
         return self._name
@@ -347,6 +363,13 @@ class PatternType(kxg.Token):
         self._on_complete_exprs = on_complete_exprs
         self._must_complete = must_complete
 
+    def __repr__(self):
+        return super().__repr__(name=self.name)
+
+    @property
+    def name(self):
+        return self._name
+
     @property
     def must_complete(self):
         return self._must_complete
@@ -392,6 +415,9 @@ class MoveType(kxg.Token):
         self._name = name
         self._mode = mode
         self._xyp_exprs = xyp_exprs
+
+    def __repr__(self):
+        return super().__repr__(name=self.name)
 
     @property
     def name(self):
