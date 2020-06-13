@@ -7,14 +7,14 @@ from cherts.config import (
         load_board, load_move_types, load_pattern_types, load_piece_types
 )
 
-# Think about adding an `on_receive`/`on_finalize`/`on_prepare` event handler 
-# that is called once the message will no longer be sent over the network.  
-# Specifically, this would be after `on_check()` but before `on_execute()`.
+# Think about adding an `on_receive`/`on_finalize`/`on_prepare`/`on_unpack` 
+# event handler that is called once the message will no longer be sent over the 
+# network.  Specifically, this would be after `on_check()` but before 
+# `on_execute()`.
 #
 # This would be useful in SetupWorld, to create tokens from the config 
-# dictionary.  Right now this is done in `tokens_to_add()`, which is fine, but 
-# requires knowing that `tokens_to_add()` is called before `on_execute()`, 
-# which isn't obvious.
+# dictionary.  Right now this has to be done in `__init__()`, which means that 
+# more data is sent over the network than is necessary.
 
 class SetupWorld(Message):
 

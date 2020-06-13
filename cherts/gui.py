@@ -4,6 +4,7 @@ import os.path as os_path
 import kxg
 import pyglet
 from pyglet.gl import *
+from nonstdlib import log, debug, info, warning, error, critical
 
 from vecrec import Vector, accept_anything_as_vector
 from .actors import BaseActor
@@ -93,10 +94,8 @@ class GuiActor(BaseActor):
 
     def __init__(self):
         super().__init__()
-
         self.player = None
-        self.selected_piece = None
-
+        self.selection = None
 
     def on_setup_gui(self, gui):
         self.gui = gui
@@ -113,14 +112,8 @@ class GuiActor(BaseActor):
         # Left click to select pieces:
         if button == 1:
             xyw = self.xyw_from_xyg((xg, yg))
-            undercursor_piece = self.world.find_piece(xyw)
-
-            if undercursor_piece is None:
-                if self.selected_piece is not None:
-                    self.selected_piece = None
-
-            elif undercursor_piece.player is self.player:
-                self.selected_piece = undercursor_piece
+            piece = self.world.find_piece(xyw)
+            self.select(piece)
 
         # Right click to direct pieces:
         elif button == 2:
@@ -129,6 +122,30 @@ class GuiActor(BaseActor):
     def on_mouse_motion(self, x, y, dx, dy):
         pass
 
+    def select(self, piece):
+        """
+        Select the given piece.
+
+        The given piece can be None, in which case the selection is cleared.
+        """
+        if piece is self.selection:
+            return
+
+        self.deselect()
+        self.selection = piece
+
+        if self.selection:
+            self.selection.get_extension(self).on_select()
+
+    def deselect(self):
+        """
+        Clear the piece selection.
+
+        This method can safely be called even if no piece is selected.
+        """
+        if self.selection:
+            self.selection.get_extension(self).on_deselect()
+            self.selection = None
 
     @accept_anything_as_vector
     def xyg_from_xyw(self, xyw):
@@ -147,6 +164,9 @@ class GuiActor(BaseActor):
     @property
     def px_per_tile(self):
         return self.gui.window_shape.y / self.world.board.height
+
+
+
 
 class BoardExtension(kxg.TokenExtension):
 
@@ -202,8 +222,6 @@ class PieceExtension(kxg.TokenExtension):
 
     @kxg.watch_token
     def on_add_to_world(self, world):
-        # Setup
-        self.selected = False
 
         # Make sprites
         self.icon_sprite = self._new_sprite(self.get_image_key(), 1)
@@ -216,6 +234,8 @@ class PieceExtension(kxg.TokenExtension):
                 self.selected_sprite,
                 self.unselected_sprite,
         ]
+
+        self.move_lines = []
 
         # Rescale the sprite image to match the piece radius
         icon_w = self.icon_sprite.width
@@ -236,24 +256,16 @@ class PieceExtension(kxg.TokenExtension):
     def on_update_game(self, delta_t):
         for sprite in self.sprites:
             sprite.position = self.actor.xyg_from_xyw(self.token.xyw)
-        
-        piece = self.token
-        actor = self.actor
 
-        if self.selected and actor.selected_piece != piece:
-            # Piece has been unselected
-            self.selected = False
-            self.selected_sprite.visible = False
-            self.unselected_sprite.visible = True
+    def on_select(self):
+        info(f"selecting piece: {self.token}")
+        self.selected_sprite.visible = True
+        self.unselected_sprite.visible = False
 
-        elif not self.selected and actor.selected_piece == piece:
-            # Piece has been selected
-            self.selected = True
-            self.selected_sprite.visible = True
-            self.unselected_sprite.visible = False
-        else:
-            # No change in status
-            pass
+    def on_deselect(self):
+        info(f"deselecting piece: {self.token}")
+        self.selected_sprite.visible = False
+        self.unselected_sprite.visible = True
 
     @kxg.watch_token
     def on_remove_from_world(self):
