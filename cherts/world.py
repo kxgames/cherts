@@ -1,6 +1,7 @@
 import kxg
 from vecrec import Vector, cast_anything_to_vector, accept_anything_as_vector
 from kxg import read_only
+from more_itertools import collapse
 
 # Variable naming conventions
 # ===========================
@@ -268,10 +269,10 @@ class Piece(kxg.Token):
 
     @read_only
     def find_possible_moves(self):
-        return [
+        return list(collapse(
                 x.make_moves(self)
-                for x in self.move_types.values()
-        ]
+                for x in self.move_types
+        ))
 
     @read_only
     def find_legal_moves(self):
@@ -396,6 +397,13 @@ class Move(kxg.Token):
         self._piece = piece
         self._xyw_path = xyw_path
 
+    def __repr__(self):
+        return super().__repr__(
+                type=self.type.name,
+                piece=self.piece.id,
+                xyw_path = self.xyw_path,
+        )
+
     @property
     def type(self):
         return self._type
@@ -434,7 +442,7 @@ class MoveType(kxg.Token):
     @read_only
     def make_moves(self, piece):
         xyw_paths = xyw_paths_from_xyp_exprs(
-                self.xyp_exprs,
+                self._xyp_exprs,
                 piece,
                 self.world.board,
         )

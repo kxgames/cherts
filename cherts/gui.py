@@ -5,6 +5,7 @@ import kxg
 import pyglet
 from pyglet.gl import *
 from nonstdlib import log, debug, info, warning, error, critical
+from more_itertools import flatten, pairwise
 
 from vecrec import Vector, accept_anything_as_vector
 from .actors import BaseActor
@@ -262,10 +263,33 @@ class PieceExtension(kxg.TokenExtension):
         self.selected_sprite.visible = True
         self.unselected_sprite.visible = False
 
+        self.move_lines = []
+
+        for move in self.token.find_possible_moves():
+            xyw_waypoints = [self.token.xyw, *move.xyw_path]
+            xygs = [
+                    self.actor.xyg_from_xyw(v)
+                    for v in flatten(pairwise(xyw_waypoints))
+            ]
+
+            n = len(xygs)
+            v2f = sum((x.tuple for x in xygs), ())
+            c3B = n * [0, 32, 73]  # navy
+
+            line = self.actor.gui.batch.add(
+                    n, GL_LINES, None,
+                    ('v2f', v2f),
+                    ('c3B', c3B),
+            )
+            self.move_lines.append(line)
+
     def on_deselect(self):
         info(f"deselecting piece: {self.token}")
         self.selected_sprite.visible = False
         self.unselected_sprite.visible = True
+
+        for line in self.move_lines:
+            line.delete()
 
     @kxg.watch_token
     def on_remove_from_world(self):
