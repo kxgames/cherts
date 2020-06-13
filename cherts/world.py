@@ -462,8 +462,8 @@ def xyw_paths_from_xyp_expr(xyp_expr, piece, board, any_ok=False):
         expr: A string containing a python expression.  The following variables 
             are available to the expression:
 
-            x: The relative x-coordinate of the piece.
-            y: The relative y-coordinate of the piece.
+            x: The x-coordinate of the piece in the "player" frame.
+            y: The y-coordinate of the piece in the "player" frame.
             w: The width of the board.
             h: The height of the board.
             any: NaN.  Used to indicate that a particular coordinate is not 
@@ -471,9 +471,9 @@ def xyw_paths_from_xyp_expr(xyp_expr, piece, board, any_ok=False):
 
             The expression should evaluate to:
 
-            - An relative coordinate, i.e. an (x, y) tuple.
-            - A list of relative coordinates, i.e. a path.
-            - A list of list of relative coordinates, i.e. multiple paths.
+            - A "player" coordinate, i.e. an (x, y) tuple.
+            - A list of "player" coordinates, i.e. a path.
+            - A list of list of "player" coordinates, i.e. multiple paths.
 
         piece: The piece the expression applies to.
         board: The board the piece is moving on.  
@@ -487,14 +487,16 @@ def xyw_paths_from_xyp_expr(xyp_expr, piece, board, any_ok=False):
     """
     player = piece.player
     any = {'any': float('nan')} if any_ok else {}
+
     xyp_piece = player.xyp_from_xyw(piece.xyw)
-    xyp_eval = eval(xyp_expr, {}, {
+    xyp_eval = eval(xyp_expr, {
             'x': xyp_piece.x,
             'y': xyp_piece.y,
             'w': board.width,
             'h': board.height,
             **any,
     })
+
     if isinstance(xyp_eval, tuple):
         return [[player.xyw_from_xyp(xyp_eval)]]
 
