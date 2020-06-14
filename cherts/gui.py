@@ -3,15 +3,19 @@
 import os.path as os_path
 import kxg
 import pyglet
+from pyglet.gl import *
+from nonstdlib import log, debug, info, warning, error, critical
+from more_itertools import flatten, pairwise
 
-from vecrec import Vector
+from vecrec import Vector, accept_anything_as_vector
 from .actors import BaseActor
+from .messages import SetupWorld
 
 pyglet.resource.path = [
         os_path.join(os_path.dirname(__file__), '..', 'resources'),
         ]
 
-class Gui(BaseActor):
+class Gui:
 #    - Needs Piece type, positions, possible/legal/current moves, 
 #      possible/legal/current patterns, pattern consequences
 #    - Highlights available moves, patterns, etc.
@@ -19,7 +23,7 @@ class Gui(BaseActor):
 
     def __init__(self):
         self.bg_color = (0.75, 0.75, 0.75, 1.0)
-        self.window_shape = Vector(800, 600)
+        self.window_shape = Vector(400, 400)
 
         self.window = pyglet.window.Window()
         self.window.set_size(*self.window_shape)
@@ -87,14 +91,12 @@ class Gui(BaseActor):
         self.batch.draw()
 
 
-class GuiActor (BaseActor):
+class GuiActor(BaseActor):
 
     def __init__(self):
         super().__init__()
-
         self.player = None
-        self.selected_piece = None
-
+        self.selection = None
 
     def on_setup_gui(self, gui):
         self.gui = gui
@@ -103,46 +105,124 @@ class GuiActor (BaseActor):
     def on_draw(self):
         self.gui.on_refresh_gui()
 
-
-    # User input events
     def on_key_press(self, symbol, modifiers):
         if symbol == pyglet.window.key.SPACE:
             pass
 
-    def on_mouse_press(self, x, y, button, modifiers):
+    def on_mouse_press(self, xg, yg, button, modifiers):
+        # Left click to select pieces:
         if button == 1:
-            # Left click to select pieces
-            undercursor_piece = self.world.find_piece_at_position(Vector(x, y))
-            
-            if undercursor_piece is None:
-                if self.selected_piece is not None:
-                    p = self.selected_piece
-                    print(f"Unselecting p{p.player} {p.type}")
-                    # Unselect a piece
-                    self.selected_piece = None
-                else:
-                    print(f"Did not select a piece")
-            else:
-                # Select piece
-                if self.selected_piece != undercursor_piece:
-                    print(f"Piece selected p{undercursor_piece.player} {undercursor_piece.type}")
-                self.selected_piece = undercursor_piece
+            xyw = self.xyw_from_xyg((xg, yg))
+            piece = self.world.find_piece(xyw)
+            self.select(piece)
 
+        # Right click to direct pieces:
         elif button == 2:
-            # Right click to direct pieces
             pass
 
     def on_mouse_motion(self, x, y, dx, dy):
         pass
 
+    def select(self, piece):
+        """
+        Select the given piece.
+
+        The given piece can be None, in which case the selection is cleared.
+        """
+        if piece is self.selection:
+            return
+
+        self.deselect()
+        self.selection = piece
+
+        if self.selection:
+            self.selection.get_extension(self).on_select()
+
+    def deselect(self):
+        """
+        Clear the piece selection.
+
+        This method can safely be called even if no piece is selected.
+        """
+        if self.selection:
+            self.selection.get_extension(self).on_deselect()
+            self.selection = None
+
+    @accept_anything_as_vector
+    def xyg_from_xyw(self, xyw):
+        # Convert to player coordinates to make sure our pieces are always 
+        # facing forward.
+        xyp = self.player.xyp_from_xyw(xyw)
+        xyp_margin = (0.5, 0.5)
+        return (xyp + xyp_margin) * self.px_per_tile
+        
+    @accept_anything_as_vector
+    def xyw_from_xyg(self, xyg):
+        xyp_margin = (0.5, 0.5)
+        xyp = (xyg / self.px_per_tile) - xyp_margin
+        return self.player.xyw_from_xyp(xyp)
+
+    @property
+    def px_per_tile(self):
+        return self.gui.window_shape.y / self.world.board.height
 
 
-class PieceExtension (kxg.TokenExtension):
+
+
+class BoardExtension(kxg.TokenExtension):
+
+    @kxg.subscribe_to_message(SetupWorld)
+    def on_setup_world(self, message):
+        # Normally this kind of setup would happen in `on_add_to_world()`, but 
+        # we can't do that here because:
+        # 
+        # - The board is added to the world before the players.
+        # - The `xyg_from_xyw()` function needs to know what player we are.
+        # 
+        # We can do this setup after the SetupWorld event, because the actor 
+        # creates the player earlier in the handling of that same event.
+
+        w, h = self.token.size
+        d = 0.5
+        xyg_from_xyw = self.actor.xyg_from_xyw
+
+        h_lines = [
+                [xyg_from_xyw(-0.5, y-0.5), xyg_from_xyw(w+0.5, y-0.5)]
+                for y in range(h+1)
+        ]
+        v_lines = [
+                [xyg_from_xyw(x-0.5, -0.5), xyg_from_xyw(x-0.5, h+0.5)]
+                for x in range(w+1)
+        ]
+        xygs = sum(h_lines + v_lines, [])
+
+        n = len(xygs)
+        v2f = sum((x.tuple for x in xygs), ())
+        c3B = n * [0, 0, 0]
+
+        self.border = self.actor.gui.batch.add(
+                n, GL_LINES, None,
+                ('v2f', v2f),
+                ('c3B', c3B),
+        )
+
+    @kxg.watch_token
+    def on_remove_from_world(self):
+        self.border.delete()
+
+
+class PieceExtension(kxg.TokenExtension):
+
+    def get_image_key(self):
+        pc = self.actor.gui.piece_file_codes
+        type = self.token.type.name
+        color = self.token.player.color
+
+        image_key = f"piece_{pc[type]}{pc[color]}t"
+        return image_key
 
     @kxg.watch_token
     def on_add_to_world(self, world):
-        # Setup
-        self.selected = False
 
         # Make sprites
         self.icon_sprite = self._new_sprite(self.get_image_key(), 1)
@@ -154,7 +234,9 @@ class PieceExtension (kxg.TokenExtension):
                 self.icon_sprite,
                 self.selected_sprite,
                 self.unselected_sprite,
-                ]
+        ]
+
+        self.move_lines = []
 
         # Rescale the sprite image to match the piece radius
         icon_w = self.icon_sprite.width
@@ -165,12 +247,54 @@ class PieceExtension (kxg.TokenExtension):
         selected_h = self.selected_sprite.height
         selected_r = (selected_w**2 + selected_h**2)**0.5 / 2
 
-        piece_r = self.token.radius
+        piece_r = self.actor.px_per_tile * self.token.radius
 
         scale = piece_r / icon_r
         for sprite in self.sprites:
             sprite.scale = scale
         
+    @kxg.watch_token
+    def on_update_game(self, delta_t):
+        for sprite in self.sprites:
+            sprite.position = self.actor.xyg_from_xyw(self.token.xyw)
+
+    def on_select(self):
+        info(f"selecting piece: {self.token}")
+        self.selected_sprite.visible = True
+        self.unselected_sprite.visible = False
+
+        self.move_lines = []
+
+        for move in self.token.find_possible_moves():
+            xyw_waypoints = [self.token.xyw, *move.xyw_path]
+            xygs = [
+                    self.actor.xyg_from_xyw(v)
+                    for v in flatten(pairwise(xyw_waypoints))
+            ]
+
+            n = len(xygs)
+            v2f = sum((x.tuple for x in xygs), ())
+            c3B = n * [0, 32, 73]  # navy
+
+            line = self.actor.gui.batch.add(
+                    n, GL_LINES, None,
+                    ('v2f', v2f),
+                    ('c3B', c3B),
+            )
+            self.move_lines.append(line)
+
+    def on_deselect(self):
+        info(f"deselecting piece: {self.token}")
+        self.selected_sprite.visible = False
+        self.unselected_sprite.visible = True
+
+        for line in self.move_lines:
+            line.delete()
+
+    @kxg.watch_token
+    def on_remove_from_world(self):
+        for sprite in self.sprites:
+            sprite.delete()
 
     def _new_sprite(self, image_key, group_num=1, **sprite_kwargs):
         """
@@ -180,10 +304,11 @@ class PieceExtension (kxg.TokenExtension):
         'group_num' is the pyglet OrderedGroup number
         'sprite_kwargs' are passed directly to Sprite constructor
         """
-        token_x, token_y = self.token.position
+
+        xg, yg = self.actor.xyg_from_xyw(self.token.xyw)
         sprite = pyglet.sprite.Sprite(
                 self.actor.gui.images[image_key],
-                x=token_x, y=token_y,
+                x=xg, y=yg,
                 batch=self.actor.gui.batch,
                 group=pyglet.graphics.OrderedGroup(group_num),
                 **sprite_kwargs,
@@ -191,45 +316,4 @@ class PieceExtension (kxg.TokenExtension):
 
         return sprite
 
-    def get_image_key(self):
-        pc = self.actor.gui.piece_file_codes
-        type = self.token.type.name
 
-        if self.token.player.id == 1:
-            color = 'white'
-        elif self.token.player.id == 2:
-            color = 'black'
-        else:
-            raise NotImplementedError
-
-        image_key = f"piece_{pc[type]}{pc[color]}t"
-        return image_key
-
-
-    @kxg.watch_token
-    def on_update_game(self, delta_t):
-        for sprite in self.sprites:
-            sprite.position = self.token.position
-
-        piece = self.token
-        guiactor = self.actor
-
-        if self.selected and guiactor.selected_piece != piece:
-            # Piece has been unselected
-            self.selected = False
-            self.selected_sprite.visible = False
-            self.unselected_sprite.visible = True
-
-        elif not self.selected and guiactor.selected_piece == piece:
-            # Piece has been selected
-            self.selected = True
-            self.selected_sprite.visible = True
-            self.unselected_sprite.visible = False
-        else:
-            # No change in status
-            pass
-
-    @kxg.watch_token
-    def on_remove_from_world(self):
-        for sprite in self.sprites:
-            sprite.delete()

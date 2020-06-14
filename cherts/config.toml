@@ -4,15 +4,68 @@ height = 8
 
 [setup]
 pieces = [
-    {name='king', pos=[0,0]},
+    {name='pawn',   pos=[0,1]},
+    {name='pawn',   pos=[1,1]},
+    {name='pawn',   pos=[2,1]},
+    {name='pawn',   pos=[3,1]},
+    {name='pawn',   pos=[4,1]},
+    {name='pawn',   pos=[5,1]},
+    {name='pawn',   pos=[6,1]},
+    {name='pawn',   pos=[7,1]},
+
+    {name='rook',   pos=[0,0]},
+    {name='knight', pos=[1,0]},
+    {name='bishop', pos=[2,0]},
+    {name='king',   pos=[3,0]},
+    {name='queen',  pos=[4,0]},
+    {name='bishop', pos=[5,0]},
+    {name='knight', pos=[6,0]},
+    {name='rook',   pos=[7,0]},
 ]
 
+
 [pieces.king]
-radius = 100
+radius = 0.4
 moves = ['king']
 move_speed = 10
 move_cooldown_sec = 10
 patterns = ['spawn', 'victory']
+
+[pieces.queen]
+radius = 0.4
+moves = ['bishop', 'rook']
+move_speed = 10
+move_cooldown_sec = 10
+patterns = ['spawn', 'victory']
+
+[pieces.knight]
+radius = 0.4
+moves = ['knight']
+move_speed = 10
+move_cooldown_sec = 10
+patterns = []
+
+[pieces.bishop]
+radius = 0.4
+moves = ['bishop']
+move_speed = 10
+move_cooldown_sec = 10
+patterns = []
+
+[pieces.rook]
+radius = 0.4
+moves = ['rook']
+move_speed = 10
+move_cooldown_sec = 10
+patterns = []
+
+[pieces.pawn]
+radius = 0.4
+moves = ['pawn']
+move_speed = 10
+move_cooldown_sec = 10
+patterns = []
+
 
 [moves.king]
 mode = 'slide'
@@ -27,10 +80,35 @@ waypoints = [
   'x+1, y-1',
 ]
 
+[moves.knight]
+mode = 'slide'
+waypoints = [
+  '[(x+0, y+2), (x+1, y+2)]',
+  '[(x+1, y+0), (x+1, y+2)]',
+  '[(x+0, y+1), (x+2, y+1)]',
+  '[(x+2, y+0), (x+2, y+1)]',
+
+  '[(x+0, y-2), (x+1, y-2)]',
+  '[(x+1, y+0), (x+1, y-2)]',
+  '[(x+0, y-1), (x+2, y-1)]',
+  '[(x+2, y+0), (x+2, y-1)]',
+
+  '[(x+0, y+2), (x-1, y+2)]',
+  '[(x-1, y+0), (x-1, y+2)]',
+  '[(x+0, y+1), (x-2, y+1)]',
+  '[(x-2, y+0), (x-2, y+1)]',
+
+  '[(x+0, y-2), (x-1, y-2)]',
+  '[(x-1, y+0), (x-1, y-2)]',
+  '[(x+0, y-1), (x-2, y-1)]',
+  '[(x-2, y+0), (x-2, y-1)]',
+]
+
 [moves.bishop]
 mode = 'slide'
 waypoints = [
-  '[[(x+i,y+i)] for i in range(max(-x, -y), min(w-x, h-y))]',
+  '[[(x+i,y+i)] for i in range(max(-x,   -y), min(w-x, h-y))]',
+  '[[(x+i,y-i)] for i in range(max(-x, -h+y), min(w-x,   y))]',
 ]
 
 [moves.rook]
@@ -39,6 +117,13 @@ waypoints = [
   '[[(x+i,y)] for i in range(-x, w-x)]',
   '[[(x,y+i)] for i in range(-y, h-y)]',
 ]
+
+[moves.pawn]
+mode = 'slide'
+waypoints = [
+  'x, y+1',
+]
+
 
 [patterns.spawn]
 waypoints = [
