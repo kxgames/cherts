@@ -1,2 +1,5 @@
 flit
-
+kxg
+vecrec
+rtoml
+more_itertools
